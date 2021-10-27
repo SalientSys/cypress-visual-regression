@@ -51,6 +51,7 @@ function compareSnapshotCommand(defaultScreenshotOptions) {
           specDirectory: Cypress.spec.name,
           baseDir: SNAPSHOT_BASE_DIRECTORY,
           diffDir: SNAPSHOT_DIFF_DIRECTORY,
+          errorThreshold
         };
         cy.task('compareSnapshotsPlugin', options).then((results) => {
           if (results.error) {
@@ -61,6 +62,27 @@ function compareSnapshotCommand(defaultScreenshotOptions) {
             throw new Error(
               `The "${name}" image is different. Threshold limit exceeded! \nExpected: ${errorThreshold} \nActual: ${results.percentage}`
             );
+          }
+        });
+      }
+      // run visual tests
+      if (Cypress.env('type') === 'warn') {
+        const options = {
+          fileName: name,
+          specDirectory: Cypress.spec.name,
+          baseDir: SNAPSHOT_BASE_DIRECTORY,
+          diffDir: SNAPSHOT_DIFF_DIRECTORY,
+          errorThreshold
+        };
+        cy.task('compareSnapshotsPlugin', options).then((results) => {
+          if (results.error) {
+            throw deserializeError(results.error);
+          }
+
+          if (results.percentage > errorThreshold) {
+            const yellow = '\x1b[33m%s\x1b[0m';
+            // eslint-disable-next-line no-console
+            console.log(yellow, `The "${name}" image is different. Threshold limit exceeded! \nExpected: ${errorThreshold} \nActual: ${results.percentage}`);
           }
         });
       }

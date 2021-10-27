@@ -68,13 +68,11 @@ async function compareSnapshotsPlugin(args) {
       `${fileName}-diff.png`
     ),
   };
-
+  const {errorThreshold} = args
   let mismatchedPixels = 0;
   let percentage = 0;
   try {
-    await createFolder(SNAPSHOT_DIFF_DIRECTORY, args.failSilently);
-    const specFolder = path.join(SNAPSHOT_DIFF_DIRECTORY, args.specDirectory);
-    await createFolder(specFolder, args.failSilently);
+
     const imgExpected = await parseImage(options.expectedImage);
     const imgActual = await parseImage(options.actualImage);
     const diff = new PNG({
@@ -103,7 +101,14 @@ async function compareSnapshotsPlugin(args) {
     );
     percentage = (mismatchedPixels / diff.width / diff.height) ** 0.5;
 
-    diff.pack().pipe(fs.createWriteStream(options.diffImage));
+    // Only create folder and snapshot if compare failed.
+    if(percentage > errorThreshold) {
+      await createFolder(SNAPSHOT_DIFF_DIRECTORY, args.failSilently);
+      const specFolder = path.join(SNAPSHOT_DIFF_DIRECTORY, args.specDirectory);
+      await createFolder(specFolder, args.failSilently);
+      diff.pack().pipe(fs.createWriteStream(options.diffImage));
+    }
+   
   } catch (error) {
     return { error: errorSerialize(error) };
   }
